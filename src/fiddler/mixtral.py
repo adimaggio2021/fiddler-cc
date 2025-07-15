@@ -30,6 +30,7 @@ class FiddlerMixtral:
         self.past_key_values_length = 0
         self.cpu_offload = args.cpu_offload
         self.beam_width = args.beam_width
+        self.mem_portion = args.mem_portion
         self.n_layer = len(self.model.layers)
         self.n_expert = len(self.model.layers[0].block_sparse_moe.experts)
        
@@ -356,7 +357,7 @@ class FiddlerMixtral:
             for p in self.model.layers[0].block_sparse_moe.experts[0].parameters()
         )
         # get the amount of free memory on GPU
-        total_mem = torch.cuda.get_device_properties(self.dev).total_memory
+        total_mem = torch.cuda.get_device_properties(self.dev).total_memory * self.mem_portion
         free_mem = total_mem * 0.95 - torch.cuda.memory_allocated(self.dev) # TODO: magic number
         return int((free_mem) // (n_param * 2))
 
@@ -438,6 +439,10 @@ class FiddlerMixtral:
             )
             # position_ids.shape: (1, 1)
             if not is_decode:
+                prefill_expert_hit = self.cnt_expert_hit
+                prefill_expert_all = self.cnt_expert_all
+                self.cnt_expert_hit = 0
+                self.cnt_expert_all = 0
                 prefill_time += time.time() - tick
                 tick = time.time()
             is_decode = True
@@ -452,7 +457,10 @@ class FiddlerMixtral:
         return (
             prefill_time,
             decode_time,
+            prefill_expert_hit / prefill_expert_all,
             self.cnt_expert_hit / self.cnt_expert_all,
+            prefill_expert_all,
+            self.cnt_expert_all
         )
 
     def tokenize(self, text):

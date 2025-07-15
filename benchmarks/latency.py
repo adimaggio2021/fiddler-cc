@@ -34,6 +34,9 @@ if __name__ == "__main__":
         help="batch size for inference.",
     )
     parser.add_argument("--beam_num", type=int, default=1, help="Beam search number.")
+    parser.add_argument("--beam_width", type=int, default=8, help="Beam width.")
+    parser.add_argument("--mem_portion", type=float, default=1.0, help="Portion of VRAM to use (between 0 and 1.0, inclusive).")
+
 
     args = parser.parse_args()
 
@@ -53,10 +56,10 @@ if __name__ == "__main__":
     model = FiddlerMixtral(args)
     n_sample = 10
 
-    for input_token in [16, 32, 64, 128]:
+    for input_token in [32]:
         for output_token in [16, 32, 64, 128, 256, 512]:
             idx_text = 0
-            prefill_time_sum, decode_time_sum, hit_rate_sum = 0, 0, 0
+            prefill_time_sum, decode_time_sum, p_hit_rate_sum, d_hit_rate_sum, p_total_sum, d_total_sum = 0, 0, 0, 0, 0, 0
             for _ in range(n_sample):
                 while True:
                     text = texts[idx_text]
@@ -64,18 +67,24 @@ if __name__ == "__main__":
                     if len(text.split()) >= input_token:
                         # enough input length
                         break
-                prefill_time, decode_time, hit_rate = model.generate(
+                prefill_time, decode_time, p_hit_rate, d_hit_rate, p_total, d_total = model.generate(
                     [text], output_token=output_token, input_token=input_token
                 )
                 prefill_time_sum += prefill_time
                 decode_time_sum += decode_time
-                hit_rate_sum += hit_rate
+                p_hit_rate_sum += p_hit_rate
+                d_hit_rate_sum += d_hit_rate
+                p_total_sum += p_total
+                d_total_sum += d_total
             # write to file
-            with open("latency.txt", "a") as f:
+            with open(f"logs/latency{args.mem_portion}.txt", "a") as f:
                 f.write(
                     f"input_token: {input_token}, output_token: {output_token}, "
                     f"prefill_time: {prefill_time_sum / n_sample}, "
                     f"decode_time: {decode_time_sum / n_sample}, "
-                    f"hit_rate: {hit_rate_sum / n_sample},"
+                    f"prefill_hit_rate: {p_hit_rate_sum / n_sample},"
+                    f"decode_hit_rate: {d_hit_rate_sum / n_sample},"
+                    f"prefill_total_count: {p_total_sum / n_sample},"
+                    f"decode_total_count: {d_total_sum / n_sample},"
                     f"{output_token *n_sample/ (prefill_time_sum + decode_time_sum):.2f}token/s\n"
                 )
