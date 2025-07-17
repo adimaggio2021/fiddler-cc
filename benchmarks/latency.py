@@ -54,10 +54,10 @@ if __name__ == "__main__":
     random.seed(0)
     random.shuffle(texts)
     model = FiddlerMixtral(args)
-    n_sample = 10
+    n_sample = 3
 
-    for input_token in [32]:
-        for output_token in [16, 32, 64, 128, 256, 512]:
+    for input_token in [32, 512, 2048]:
+        for output_token in [16, 32, 64, 128, 256, 512, 1024]:
             idx_text = 0
             prefill_time_sum, decode_time_sum, p_hit_rate_sum, d_hit_rate_sum, p_total_sum, d_total_sum = 0, 0, 0, 0, 0, 0
             for _ in range(n_sample):
@@ -77,7 +77,7 @@ if __name__ == "__main__":
                 p_total_sum += p_total
                 d_total_sum += d_total
             # write to file
-            with open(f"logs/latency{args.mem_portion}.txt", "a") as f:
+            with open(f"logs/no-beam/{args.mem_portion}.txt", "a") as f:
                 f.write(
                     f"input_token: {input_token}, output_token: {output_token}, "
                     f"prefill_time: {prefill_time_sum / n_sample}, "
