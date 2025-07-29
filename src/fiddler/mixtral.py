@@ -490,6 +490,11 @@ class FiddlerMixtral:
         print("--------------------")
         print(f"Input: {text}")
         print(f"Output: {decode_strings[max_ids[0]]}")
+        
+        if prefill_expert_all == 0:
+            prefill_expert_all = 1
+        if self.cnt_expert_all == 0:
+            self.cnt_expert_all = 1
 
         return (
             prefill_time,
@@ -560,7 +565,9 @@ class FiddlerMixtral:
                 ).permute(2, 1, 0)
 
                 for i_expert in range(len(experts)):
-                    is_cuda = random.random() < self.hit_rate
+                    is_cuda = random.random() < self.hit_rate or i_expert == 0
+                    if is_cuda:
+                        i_expert = 0
                     idx, top_2 = torch.where(expert_mask[i_expert])
 
                     if top_2.shape[0] == 0:
@@ -573,7 +580,6 @@ class FiddlerMixtral:
 
                     current_state = inps[None, top_2_list].reshape(-1, hidden_dim)
                     if not is_cuda:
-                        experts[i_expert] = experts[i_expert].to("cpu")
                         self.expert_placeholder.load_state_dict(
                             experts[i_expert].state_dict()
                         )
@@ -581,7 +587,7 @@ class FiddlerMixtral:
                             current_state, routing_weights[top_2_list, idx_list, None]
                         )
                     else:
-                        current_state = experts[0](
+                        current_state = experts[i_expert](
                             current_state, routing_weights[top_2_list, idx_list, None]
                         )
                     inps_after_experts.index_add_(

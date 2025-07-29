@@ -36,7 +36,7 @@ if __name__ == "__main__":
     parser.add_argument("--beam_num", type=int, default=1, help="Beam search number.")
     parser.add_argument("--beam_width", type=int, default=8, help="Beam width.")
     parser.add_argument("--mem_portion", type=float, default=1.0, help="Portion of VRAM to use (between 0 and 1.0, inclusive).")
-
+    parser.add_argument("--hit_rate", type=float, default=1.0, help="Simulated hit rate (used with cpu_offload 0)")
 
     args = parser.parse_args()
 
@@ -56,8 +56,8 @@ if __name__ == "__main__":
     model = FiddlerMixtral(args)
     n_sample = 3
 
-    for input_token in [32, 512, 2048]:
-        for output_token in [16, 32, 64, 128, 256, 512, 1024]:
+    for input_token in [512]:
+        for output_token in [16]:
             idx_text = 0
             prefill_time_sum, decode_time_sum, p_hit_rate_sum, d_hit_rate_sum, p_total_sum, d_total_sum = 0, 0, 0, 0, 0, 0
             for _ in range(n_sample):
@@ -77,7 +77,7 @@ if __name__ == "__main__":
                 p_total_sum += p_total
                 d_total_sum += d_total
             # write to file
-            with open(f"logs/no-beam/{args.mem_portion}.txt", "a") as f:
+            with open(f"logs/hit_rate{args.hit_rate}.txt", "a") as f:
                 f.write(
                     f"input_token: {input_token}, output_token: {output_token}, "
                     f"prefill_time: {prefill_time_sum / n_sample}, "
